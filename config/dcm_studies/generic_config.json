@@ -1,0 +1,34 @@
+{
+    "actions": {
+        "acqdatetime": {
+            "filters": {}, 
+            "params": {}
+        }, 
+        "header_series": {
+            "filters": {}, 
+            "params": {},
+            "tags":[]
+        }, 
+        "qc_series": {
+            "filters": {}, 
+            "params": {}
+        }
+    }, 
+    "cfgformat": "20180910", 
+    "comments": {
+        "author": "Jaap Groen, OLVG",  
+        "description": "Generic AI-based analysis of Normi13 phantom", 
+        "version": "20200511"
+    }, 
+    "info": {
+        "acqdatetime": {
+            "params": {}
+        }, 
+        "header_series": {
+            "params": {}
+        }, 
+        "qc_series": {
+            "params": {}
+        }
+    }
+}

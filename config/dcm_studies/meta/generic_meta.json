@@ -1,0 +1,33 @@
+{
+    "actions": {
+        "acqdatetime": {
+            "filters": {},
+            "params": {}
+        },
+        "header_series": {
+            "filters": {},
+            "params": {}
+        },
+        "qc_series": {
+            "filters": {},
+            "params": {}
+        }
+    },
+    "cfgformat": "20180910",
+    "comments": {
+        "author": "Jaap Groen, OLVG",
+        "description": "meta for NormAI13 module",
+        "version": "20200511"
+    },
+    "info": {
+        "acqdatetime": {
+            "params": {}
+        },
+        "header_series": {
+            "params": {}
+        },
+        "qc_series": {
+            "params": {}
+        }
+    }
+}
