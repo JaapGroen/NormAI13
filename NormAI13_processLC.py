@@ -47,12 +47,16 @@ def process_LowContrast(image_raw,resolution):
             cutoff_y = i
             break
     image_crop = image_raw[0:cutoff_y-1,0:image_raw.shape[1]]
+
+    # correct image for offset
+    corr = np.mean(image_crop,axis=0)
+    image_crop_corr = image_crop - corr
     
     # look for the 2 first circles, starting with the biggest contrast
     found_circles = []
     x_border = 0
     while len(found_circles)<2:   # we stop when we have 2 objects
-        image_sub = image_crop[:,x_border+object_radius:image_crop.shape[1]]
+        image_sub = image_crop_corr[:,x_border+object_radius:image_crop_corr.shape[1]]
         best_fit = find_LC(image_sub,object_radius) 
         best_fit['x'] = best_fit['x'] + x_border + object_radius
         x_border = best_fit['x'] + object_radius   # we cut off the part with the just found circle
