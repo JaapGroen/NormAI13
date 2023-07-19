@@ -21,8 +21,15 @@ def process_LP(image_raw,resolution):
     
     # detect to angle of rotation
     image_8bit = ((image_raw / np.amax(image_raw)) * 255).astype(np.uint8)
-    image_edges = cv2.Canny(image_8bit, 100, 100) 
-    lines = cv2.HoughLinesP(image_edges, 1, math.pi / 180.0, 100, minLineLength=80, maxLineGap=5)  
+    image_edges = cv2.Canny(image_8bit, 100, 100)
+    
+    lines = cv2.HoughLinesP(image_edges, 1, math.pi / 180.0, 100, minLineLength=80, maxLineGap=5)
+    if lines is None:
+        kernel = np.ones((5, 5), np.uint8)
+        image_dilate = cv2.dilate(image_edges, kernel, iterations=2)
+        image_erode = cv2.erode(image_dilate, kernel, iterations=1)
+        lines = cv2.HoughLinesP(image_erode, 1, math.pi / 180.0, 100, minLineLength=80, maxLineGap=5)
+    
     angles = []
     x_min, y_min = image_raw.shape
     x_max = 0
@@ -45,9 +52,13 @@ def process_LP(image_raw,resolution):
             angles.append(angle+180)
             plt.plot([x1,x2],[y1,y2])
     results['raw image'] = fig
+#     plt.close()
     
     angle = np.median([abs(a) for a in angles])
+    if 35<angle<55:
+        angle = angle+90
     results['correction angle'] = angle
+#     print('angle:',angle)
 
     # rotate the image by detected angle
     image_rot = ndimage.rotate(image_raw, abs(angle))
@@ -57,8 +68,8 @@ def process_LP(image_raw,resolution):
     plt.imshow(image_rot,cmap='gray')
     plt.title('rotated raw image')
     results['corrected image'] = fig
+    plt.close()
     
-       
     # calculate to number of pixels needed for the bars section based on the pixelspacing
     lines_width = int(43/resolution[0])
     lines_height = int(34/resolution[1])
@@ -89,6 +100,7 @@ def process_LP(image_raw,resolution):
     plt.imshow(image_2,cmap='gray')
     plt.title('bars 2')
     results['image_bars'] = fig
+    plt.close()
     
     # make a profile, correct the gradient and detect the peaks
     profile_1 = np.mean(image_1,axis=1)
@@ -129,6 +141,7 @@ def process_LP(image_raw,resolution):
     results['bar_profiles'] = fig
     results['lb peaks'] = len(peaks_lb[0])
     results['sb peaks'] = len(peaks_lb[0])
+    plt.close()
     
     if len(peaks_lb[0]) < 24:
         first_distance = peaks_lb[0][1]-peaks_lb[0][0]
