@@ -12,9 +12,15 @@ def process_HC(image_raw):
     plt.imshow(image_raw, cmap='gray')
     plt.title('Input image')
     results['raw input'] = fig
+#     plt.close()
     
     image_rot,angle = CorrectRotation(image_raw,reshape = False)
-    results['correction angle raw image'] = angle      
+    results['correction angle raw image'] = angle
+    
+    if 42<abs(angle)<48:
+        print('Angle cannot be {angle:.2f} degrees, revert the correction.'.format(angle=angle))
+        image_rot = image_raw
+        results['correction angle raw image'] = 0
     
     #use vert profile to crop the image in the vertical direction
     vert_profile = np.mean(image_rot,axis=1)
@@ -31,7 +37,7 @@ def process_HC(image_raw):
         if (np.mean(t) < vert_profile_mean*1.05) and (np.mean(t) > vert_profile_mean*0.95):
             index_end = i
     image_crop = image_rot[index_start:index_end,:]  
-  
+
     # use horizontal profile to crop in horizontal direction
     hor_profile = np.mean(image_crop,axis=0)      
     hor_profile_mean = np.mean(hor_profile)
@@ -62,15 +68,17 @@ def process_HC(image_raw):
     plt.imshow(image_corr, cmap='gray')
     plt.title('corrected image')
     results['corrected_image'] = fig
-    
+       
     # use new horizontal profile to find the different parts, peak height can be used as lower detection limit.
     hor_profile = np.mean(image_corr,axis=0)
     diff = np.diff(hor_profile)
     
     updating = True
-    height = 25
+    height = 15
+    distance = round(len(diff)/10)
+    print('dist',distance)
     while updating:
-        peaks = signal.find_peaks(diff,height = height)
+        peaks = signal.find_peaks(diff,height = height,distance = distance)
         if len(peaks[0])>6:
             height = height+1
         else:
@@ -83,6 +91,7 @@ def process_HC(image_raw):
     plt.scatter(peaks[0],peaks[1]['peak_heights'],marker = 'o')
     plt.title('Profile and peakdetection')
     results['profile image'] = fig
+#     plt.close()
     
     contrasts = []
     for i in range(0,len(peaks[0])):

@@ -66,11 +66,11 @@ def process_detection(image,detection):
         if LP_object['position'] == 'west':
             results['transformations'].append('Flipping the image vertically')
             image,detection = VerticalFlip(image, objects)
-            results['transformations'].append('Flipping the image horizontally')
-            image,detection = HorizontalFlip(image, objects)
         elif LP_object['position'] == 'east':
             results['transformations'].append('Flipping the image vertically')
-            image,detection = VerticalFlip(image, objects)   
+            image,detection = VerticalFlip(image, objects)
+            results['transformations'].append('Flipping the image horizontally')
+            image,detection = HorizontalFlip(image, objects)            
     elif HC_object['position'] == 'west':
         if LP_object['position'] == 'north':
             results['transformations'].append('Flipping the image vertically')

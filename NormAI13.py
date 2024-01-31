@@ -1,52 +1,54 @@
-#!/usr/bin/env python
-# This program is free software: you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
-# 
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-# 
-# You should have received a copy of the GNU General Public License
-# along with this program.  If not, see <http://www.gnu.org/licenses/>.
-#
-# PyWAD is open-source software and consists of a set of modules written in python for the WAD-Software medical physics quality control software. 
-# The WAD Software can be found on https://github.com/wadqc
-# 
-# The pywad package includes modules for the automated analysis of QC images for various imaging modalities. 
-# PyWAD has been originaly initiated by Dennis Dickerscheid (AZN), Arnold Schilham (UMCU), Rob van Rooij (UMCU) and Tim de Wit (AMC) 
-#
-#
-# Changelog:
-#   20200417: first version
-#
-# python NormAI13.py -r results.json -c config.json -d images\studies\study_01
-
-from __future__ import print_function
-
-__version__ = '20200417'
-__author__ = 'jmgroen'
-
-import os
 from wad_qc.module import pyWADinput
 from wad_qc.modulelibs import wadwrapper_lib
-
 import numpy as np
-import scipy
-if not 'MPLCONFIGDIR' in os.environ:
-    # using a fixed folder is preferable to a tempdir, because tempdirs are not automatically removed
-    os.environ['MPLCONFIGDIR'] = "/tmp/.matplotlib" # if this folder already exists it must be accessible by the owner of WAD_Processor 
-import matplotlib
-matplotlib.use('Agg') # Force matplotlib to not use any Xwindows backend.
 
-# imports
-import torch
-import torchvision
 
 def logTag():
     return "[NormAI13] "
+    
+def LogHeaderTags(data, results, action):
+       
+    # get the first (and only) file
+    instances = data.getAllInstances()
+    
+    instance=instances[0]
+        
+    # we need pydicom to read out dicom tags
+    try:
+        import pydicom as dicom
+    except ImportError:
+        import dicom
+           
+    # look in the config file for tags and write them as results, nested tags are supported 2 levels
+    for key in action['tags']:
+        varname=key
+        tag=action['tags'][key]
+        try:
+            if tag.count('/')==0:
+                value=instance[dicom.tag.Tag(tag.split(',')[0],tag.split(',')[1])].value
+            elif tag.count('/')==1:
+                tag1=tag.split('/')[0]
+                tag2=tag.split('/')[1]
+                value=instance[dicom.tag.Tag(tag1.split(',')[0],tag1.split(',')[1])][0]\
+                [dicom.tag.Tag(tag2.split(',')[0],tag2.split(',')[1])].value
+            elif tag.count('/')==2:
+                tag1=tag.split('/')[0]
+                tag2=tag.split('/')[1]
+                tag3=tag.split('/')[2]
+                value=instance[dicom.tag.Tag(tag1.split(',')[0],tag1.split(',')[1])][0]\
+                [dicom.tag.Tag(tag2.split(',')[0],tag2.split(',')[1])][0]\
+                [dicom.tag.Tag(tag3.split(',')[0],tag3.split(',')[1])].value
+            else:
+                # not more then 2 levels...
+                value='too many levels'
+
+        except:
+            value = 'Tag missing from header'
+            
+        # write results
+        results.addString(varname, str(value)[:min(len(str(value)),100)])
+
+
 
 def acqdatetime_series(data, results, action):
     """
@@ -62,61 +64,25 @@ def acqdatetime_series(data, results, action):
     try:
         params = action['params']
     except KeyError:
-        params = {}
-
+        params = {}    
+        
     ## 1. read only headers
     dcmInfile = dicom.read_file(data.series_filelist[0][0], stop_before_pixels=True)
+    
+    ds = dicom.dcmread(data.series_filelist[0][0])
+    print('Syntax:',ds.file_meta.TransferSyntaxUID)
+    
+#     print(dcmInfile)
 
-    dt = wadwrapper_lib.acqdatetime_series(dcmInfile)
+    dt = wadwrapper_lib.get_datetime(dcmInfile,"Acquisition")
 
     results.addDateTime('AcquisitionDateTime', dt)
-     
+    
+#     print('StudyDate:',dt)        
 
-def header_series(data, results, action):
-       
-    # get the first (and only) file
-    instances = data.getAllInstances()
-    
-    if len(instances) != 1:
-        print('%s Error! Number of instances not equal to 1 (%d). Exit.'%(logTag(),len(instances)))
-    instance=instances[0]
-    
-    # we need pydicom to read out dicom tags
-    try:
-        import pydicom as dicom
-    except ImportError:
-        import dicom
-    
-    # look in the config file for tags and write them as results, nested tags are supported 2 levels
-    for key in action['tags']:
-        varname=key
-        tag=action['tags'][key]
-        if tag.count('/')==0:
-            value=instance[dicom.tag.Tag(tag.split(',')[0],tag.split(',')[1])].value
-        elif tag.count('/')==1:
-            tag1=tag.split('/')[0]
-            tag2=tag.split('/')[1]
-            value=instance[dicom.tag.Tag(tag1.split(',')[0],tag1.split(',')[1])][0]\
-            [dicom.tag.Tag(tag2.split(',')[0],tag2.split(',')[1])].value
-        elif tag.count('/')==2:
-            tag1=tag.split('/')[0]
-            tag2=tag.split('/')[1]
-            tag3=tag.split('/')[2]
-            value=instance[dicom.tag.Tag(tag1.split(',')[0],tag1.split(',')[1])][0]\
-            [dicom.tag.Tag(tag2.split(',')[0],tag2.split(',')[1])][0]\
-            [dicom.tag.Tag(tag3.split(',')[0],tag3.split(',')[1])].value
-        else:
-            # not more then 2 levels...
-            value='too many levels'
-
-        # write results
-        results.addString(varname, str(value)[:min(len(str(value)),100)])    
-    
-              
 def Normi13_analysis(data, results, action):
 
     import time
-    
     
     try:
         params = action['params']
@@ -125,8 +91,26 @@ def Normi13_analysis(data, results, action):
     
     # assume that there is 1 file with multiple images
     instances = data.getAllInstances()
-    instance=instances[0]
     
+    if len(instances)>1:
+        print('There are more than 1 images, only analyzing the first one!')
+        # print('File:',instances[0].filename)
+    
+    
+    
+#     imgs = []
+#     for instance in instances:
+#         new_img = instance.pixel_array.astype('float32')
+# #         hash = imagehash.average_hash(new_img)
+#         print(hash(str(new_img)))
+        
+
+#     print(len(imgs),' unique images found')
+            
+    
+    
+    instance=instances[0]
+       
     main_results = {}
     def process_results(result,prefix=None):
         for item in result:
@@ -181,15 +165,16 @@ def Normi13_analysis(data, results, action):
                     fn = 'HighContrast_wedge_image.png'
                     main_results['corrected_image'].savefig(fn, bbox_inches = 'tight')
                     results.addObject('HighContrast_wedge_image', fn)
-            except:
-                print('HC analysis failed')
+            except Exception as e:
+                print('HC analysis failed:',e)
         if object['type'] == '2':
             print('Start LP analysis')
             try:
                 start = time.time()
                 result = process_LP(object_image,main_results['resolution'])
                 print('LP analysis completed in',time.time()-start,'seconds')
-                if process_results(result):
+                if process_results(result):                  
+                    results.addFloat('Phantom angle', main_results['correction angle']-135)
                     results.addFloat('Resolution visible', main_results['resolution visible'])
                     fn = 'LinePairs_corrected_image.png'
                     main_results['corrected image'].savefig(fn, bbox_inches = 'tight')
@@ -200,8 +185,8 @@ def Normi13_analysis(data, results, action):
                     fn = 'LinePairs_profiles.png'
                     main_results['bar_profiles'].savefig(fn, bbox_inches = 'tight')
                     results.addObject('LinePairs_profiles', fn)
-            except:
-                print('LP analysis failed')
+            except Exception as e:
+                print('LP analysis failed:',e)
         if object['type'] == '3':
             print('Running Noise analysis')
             try:
@@ -215,8 +200,10 @@ def Normi13_analysis(data, results, action):
                     fn = 'Uniformity_ROIs.png'
                     main_results['Uniformity image'].savefig(fn, bbox_inches = 'tight')
                     results.addObject('Uniformity_ROIs', fn)
-            except:
-                print('Noise analysis failed')
+                    results.addFloat('Uniformity_A', main_results['uniformity_A'])
+                    results.addFloat('Uniformity_B', main_results['uniformity_B'])
+            except Exception as e:
+                print('Noise analysis failed:',e)
         if object['type'] == '4':
             print('Running LC analysis')
             try:
@@ -230,8 +217,15 @@ def Normi13_analysis(data, results, action):
                     fn = 'LowContrast_plot.png'
                     main_results['LowContrast_plot'].savefig(fn, bbox_inches = 'tight')
                     results.addObject('LowContrast_plot', fn)
-            except:
-                print('LC analysis failed')
+
+                    fn = 'Object1_detection.png'
+                    main_results['Object1_detection'].savefig(fn, bbox_inches = 'tight')
+                    results.addObject('Object1_detection', fn)
+                    fn = 'Object2_detection.png'
+                    main_results['Object2_detection'].savefig(fn, bbox_inches = 'tight')
+                    results.addObject('Object2_detection', fn)
+            except Exception as e:
+                print('LC analysis failed:',e)
                 
 
     
@@ -239,21 +233,14 @@ if __name__ == "__main__":
     #import the pyWAD framework and get some objects
     data, results, config = pyWADinput()
 
-    # look in the config for actions and run them
     for name,action in config['actions'].items():
-        
-        # save acquisition time and date as result        
         if name == 'acqdatetime':
-           acqdatetime_series(data, results, action)
+            acqdatetime_series(data, results, action)
 
-        # save whatever tag is requested as result
-        elif name == 'header_series':
-           header_series(data, results, action)
+        elif name == 'LogHeaderTags':
+            LogHeaderTags(data, results, action)
 
-        # run the Normi13 analysis
-        elif name == 'qc_series':
+        elif name == 'Normi13_analysis':
             Normi13_analysis(data, results, action)
-
-    results.write()
-
-    # all done
+            
+        results.write()

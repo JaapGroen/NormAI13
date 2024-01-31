@@ -2,7 +2,7 @@ import math
 import cv2
 import scipy
 from scipy import ndimage, signal
-import skimage 
+# import skimage 
 import math
 import matplotlib.pyplot as plt
 import numpy as np

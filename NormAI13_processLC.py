@@ -1,123 +1,242 @@
 import cv2
-import scipy.ndimage as ndimage
-from matplotlib.patches import Circle, Rectangle
+import numpy as np
 import matplotlib.pyplot as plt
-from NormAI13_transformations import *
+from matplotlib.patches import Ellipse
+import math
 
-# find a cirle with a moving mask and low mean value and low std
-def find_LC(image,radius):
-    best_fit = {'mean':99999,'std':99999,'x':0,'y':0}
-    height, width = image.shape
-    x, y = np.meshgrid(np.arange(width), np.arange(height))
+def fitEllipse(x,y):
+    x=x[:,None]
+    y=y[:,None]
+
+    D=np.hstack([x*x,x*y,y*y,x,y,np.ones(x.shape)])
+    S=np.dot(D.T,D)
+    C=np.zeros([6,6])
+    C[0,2]=C[2,0]=2
+    C[1,1]=-1
+    E,V=np.linalg.eig(np.dot(np.linalg.inv(S),C))
+    n=np.argmax(E)
+    a=V[:,n]
+    return a
+
+def BilinearInterpolation(row,col,image):
+    c1 = math.floor(col)
+    c2 = math.ceil(col)
+    r1 = math.floor(row)
+    r2 = math.ceil(row)
+    m11 = image[r1,c1]
+    m12 = image[r1,c2]
+    m21 = image[r2,c1]
+    m22 = image[r2,c2]
+    value = np.interp(col, [c1,c2], [np.interp(row, [r1, r2], [m11, m21]),np.interp(row, [r1, r2], [m12, m22])])
+    return value
+
+def ellipse_center(a):
+    b,c,d,f,g,a = a[1]/2, a[2], a[3]/2, a[4]/2, a[5], a[0]
+    num = b*b-a*c
+    x0=(c*d-b*f)/num
+    y0=(a*f-b*d)/num
+    return np.array([x0,y0])
+
+def ellipse_axis_length(a):
+    b,c,d,f,g,a = a[1]/2, a[2], a[3]/2, a[4]/2, a[5], a[0]
+    up = 2*(a*f*f+c*d*d+g*b*b-2*b*d*f-a*c*g)
+    down1=(b*b-a*c)*( (c-a)*np.sqrt(1+4*b*b/((a-c)*(a-c)))-(c+a))
+    down2=(b*b-a*c)*( (a-c)*np.sqrt(1+4*b*b/((a-c)*(a-c)))-(c+a))
+    res1=np.sqrt(up/down1)
+    res2=np.sqrt(up/down2)
+    return np.array([res1, res2])
+
+def ellipse_angle_of_rotation2(a):
+    b,c,d,f,g,a = a[1]/2, a[2], a[3]/2, a[4]/2, a[5], a[0]
+    if b == 0:
+        if a > c:
+            return 0
+        else:
+            return np.pi/2
+    else:
+        if a > c:
+            return np.arctan(2*b/(a-c))/2
+        else:
+            return np.pi/2 + np.arctan(2*b/(a-c))/2
+            
+def find_circle_center(image,resolution):  
+    fig, axes = plt.subplots(1, 4, figsize=(15, 5))
+    axes[0].imshow(image, cmap='gray')
+    axes[0].set_title('Partial Image')
+
+    threshold = 130
+    mask = image < threshold
+    mask = mask.astype('uint8')
+    axes[1].imshow(mask, cmap='gray')
+    axes[1].set_title('Mask')
+
+    sobel_x = cv2.Sobel(mask, cv2.CV_64F, 1, 0, ksize=3)
+    sobel_y = cv2.Sobel(mask, cv2.CV_64F, 0, 1, ksize=3)
+    image_edges = np.sqrt(sobel_x**2 + sobel_y**2)
+    axes[2].imshow(image_edges, cmap='gray')
+    axes[2].set_title('Edges')
+
+    rows, cols = image_edges.shape
+
+    estimate_x = rows//2
+    estimate_y = cols//2
     
-    for x_center in range(radius,width-radius):
-        for y_center in range(radius,height-radius):
-            d2 = (x - x_center)**2 + (y - y_center)**2
-            mask = d2 < radius**2
-            ROImean = np.mean(image[mask])
-            ROIstd = np.std(image[mask])
-            if ROImean < best_fit['mean'] and ROIstd < best_fit['std']*1.05:
-                best_fit['mean'] = ROImean
-                best_fit['std'] = ROIstd
-                best_fit['x'] = x_center
-                best_fit['y'] = y_center
-    return best_fit
+    max_estimate = int(7 / resolution[0])
+    while max_estimate>rows or max_estimate>cols: #if object is close to the edge.
+        max_estimate = max_estimate-1   
+    min_estimate= 0
+    skip_angle = 0
+    
+    # we get the last part of the profile along an angle and look for the edge coordinates (angle and radius)
+    edge_x=[]
+    edge_y=[]
+    angles = np.arange(0+math.radians(skip_angle)-np.pi/2,2*np.pi-math.radians(skip_angle)-np.pi/2, 0.01)
+    # for angle in np.arange(0+math.radians(skip_angle)-np.pi/2,2*np.pi-math.radians(skip_angle)-np.pi/2, 0.01):
+    for angle in angles:
+        v=[]
+        r=[]
+        for rsub in range(min_estimate,max_estimate,1):
+            x=rsub * math.sin((angle)) + estimate_x
+            y=rsub * math.cos((angle)) + estimate_y
+            try:
+                v.append(BilinearInterpolation(int(x),int(y),image_edges))     #subpixel resolution
+                r.append(rsub)
+            except:
+                pass
+        pixsum=0
+        rowsum=0                
+        for i in range(0,len(v),1):
+            if v[i] is not None:
+                pixsum=pixsum+v[i]
+                rowsum=rowsum+v[i]*r[i]
+        if pixsum>0:
+            r_edge=rowsum/pixsum
+        else:
+            r_edge=None
+        
+        if r_edge:
+            xt=r_edge * math.sin((angle)) + estimate_x
+            yt=r_edge * math.cos((angle)) + estimate_y
+            edge_x.append(xt)
+            edge_y.append(yt)
 
-# function for getting circular ROI statistics
-def measure_ROI(image,ROI_centerX,ROI_centerY,ROI_radius):
-    H, W = image.shape
-    x, y = np.meshgrid(np.arange(W), np.arange(H))
-    d2 = (x - ROI_centerX)**2 + (y - ROI_centerY)**2
-    mask = d2 < ROI_radius**2
-    ROImean=np.mean(image[mask])
-    ROIstd=np.std(image[mask])
-    ROIsize=np.sum(mask)
-    return ROImean,ROIstd,ROIsize
 
-# main function
-def process_LowContrast(image_raw,resolution):
+    axes[3].imshow(image, cmap='gray')
+    axes[3].set_title('ROI')
+    
+    # fit the found edge points to an ellipse
+    edge_x = np.asarray(edge_x)
+    edge_y = np.asarray(edge_y)
+    a = fitEllipse(edge_x,edge_y)
+    center = ellipse_center(a)
+    phi = ellipse_angle_of_rotation2(a)
+    axes_ellips = ellipse_axis_length(a)
+    radius = np.mean(axes_ellips)
+
+    ellipse = plt.Circle((center[1], center[0]), radius, color='r', fill=False)
+    axes[3].add_patch(ellipse)
+    plt.close()
+    
+    return center, phi, axes_ellips, fig
+
+def calculate_contrast(image,center,resolution,annulus_outer_radius,annulus_inner_radius):
+    circle_mask = np.zeros_like(image, dtype=np.uint8)
+    cv2.circle(circle_mask, (int(center[0]), int(center[1])),
+               int(3/resolution[0]), 1, -1)   # ROI with radius of 3 mm
+    mean_value = np.mean(image[circle_mask == 1])
+
+    annulus_mask = np.zeros_like(image, dtype=np.uint8)
+    cv2.circle(annulus_mask, (int(center[0]), int(center[1])),
+               int(annulus_outer_radius/resolution[0]), 1, -1)
+    cv2.circle(annulus_mask, (int(center[0]), int(center[1])),
+               int(annulus_inner_radius/resolution[0]), 0, -1)
+    mean_annulus = np.mean(image[annulus_mask == 1])
+    contrast = 100*((mean_annulus-mean_value)/mean_annulus)
+    return mean_value,mean_annulus,contrast
+    
+    
+
+def process_LowContrast(image, resolution):
     results = {}
     
-    # object diameter = 10 mm
-    object_radius = int(5 / resolution[0]) 
-    
-    # crop the image by removing all rows with a 0 in it.
-    for i in range(image_raw.shape[0]-1,0,-1):
-        if np.min(image_raw[i,:]) != 0:
-            cutoff_y = i
-            break
-    image_crop = image_raw[0:cutoff_y-1,0:image_raw.shape[1]]
+    LC_centers = []
 
-    # correct image for offset
-    corr = np.mean(image_crop,axis=0)
-    image_crop_corr = image_crop - corr
+    # Sizes in mm for drawing and calculating contrast
+    object_radius = 5
+    annulus_inner_radius = 7
+    annulus_outer_radius = 9
     
-    # look for the 2 first circles, starting with the biggest contrast
-    found_circles = []
-    x_border = 0
-    while len(found_circles)<2:   # we stop when we have 2 objects
-        image_sub = image_crop_corr[:,x_border+object_radius:image_crop_corr.shape[1]]
-        best_fit = find_LC(image_sub,object_radius) 
-        best_fit['x'] = best_fit['x'] + x_border + object_radius
-        x_border = best_fit['x'] + object_radius   # we cut off the part with the just found circle
-        found_circles.append(best_fit)
-    results['found circles'] = len(found_circles)
+    # first some image processing
+    normalized_image = cv2.normalize(image, None, 0, 255, cv2.NORM_MINMAX)  # Normalize the image to have pixel values in the range [0, 255]
+    denoised_image = cv2.GaussianBlur(normalized_image, (25, 25), 0)  # Increase denoising by applying Gaussian blur with larger kernel size
 
-    # plot the found circles in red
-    fig = plt.figure()
-    plt.imshow(image_crop,cmap='gray')
-    plt.title('Cropped image with ROIs')
-    for circle in found_circles:
-        circ = Circle((circle['x'],circle['y']),object_radius,linewidth=1,edgecolor='red',facecolor='none')
-        ax = plt.gca()
-        ax.add_patch(circ)
-        
-    # distances between 1 and 2
-    x_distance = found_circles[1]['x'] - found_circles[0]['x']
-    y_distance = found_circles[1]['y'] - found_circles[0]['y']
+    # Find the x-coordinate of the local minimum (first object)
+    first_object_x = np.argmin(np.mean(denoised_image, axis=0))
+    print(f'The x-coordinate of the first object: {first_object_x}')    
+
+    # Cut out a larger portion of the denoised image around the first object with a diameter of 10 mm and larger margin
+    object_diameter_mm = 10  # Diameter for the cut-out
+    margin_mm = 4  # Increased margin
+
+    # Cut out a portion of the image around the specified x-coordinate with a larger margin
+    pixels_per_mm = 1 / resolution[0]
+    diameter_pixels = int(object_diameter_mm * pixels_per_mm)
+    margin_pixels = int(margin_mm * pixels_per_mm)
+
+    x_start = max(0, first_object_x - diameter_pixels // 2 - margin_pixels)
+    x_end = min(denoised_image.shape[1], first_object_x + diameter_pixels // 2 + margin_pixels)
+    portion = denoised_image[:, x_start:x_end]
+
+    # Subpixel object detection
+    detected_center, detected_angle, detected_axes,fig = find_circle_center(portion, resolution)
+    circle_center = (detected_center[1] + x_start, detected_center[0])
+    LC_centers.append(circle_center)
+    results['Object1_detection'] = fig
+
+    # Estimate the second object
+    second_object_x = int(20 / resolution[0] + circle_center[0])
+    x_start = max(0, int(second_object_x) - diameter_pixels // 2 - margin_pixels)
+    x_end = min(image.shape[1], int(second_object_x) + diameter_pixels // 2 + margin_pixels)
+    portion = denoised_image[:, x_start:x_end]
+
+    # Subpixel object detection
+    detected_center, detected_angle, detected_axes, fig = find_circle_center(portion, resolution)
+    circle_center = (detected_center[1] + x_start, detected_center[0])
+    LC_centers.append(circle_center)
+    results['Object2_detection'] = fig
     
-    # add the first 2 circles
-    circles = []
-    circles.append(found_circles[0])
-    circles.append(found_circles[1])
+    # Calculate offsets
+    x_distance = LC_centers[1][0] - LC_centers[0][0]
+    y_distance = LC_centers[1][1] - LC_centers[0][1]
     
-    # circles positioned in a straight line, thus add 4 remaining circles based upon distances
+    # Objects positioned in a straight line, thus add 4 remaining circles based upon distances
     for x in range(0,4):
-        circles.append({'x':circles[-1]['x']+x_distance,'y':circles[-1]['y']+y_distance})
- 
-    # properties of the background part
-    background = {}
-    background['x'] = 0
-    background['y'] = 0
-    background['width'] = image_crop.shape[1]
-    background['height'] = np.min([circles[0]['y']-object_radius-5,circles[5]['y']-object_radius-5])  # the line might be angled
-    image_background = image_crop[background['x']:background['x']+background['width'],
-                                  background['y']:background['y']+background['height']]
-    mean_background = np.mean(image_background)
- 
-    # reduce the radius for measurement in case of sub-optimal position 
-    object_radius_measure = int(4 / resolution[0])
-
-    # add the circles to the plot in blue
+        LC_centers.append([LC_centers[-1][0]+x_distance,LC_centers[-1][1]+y_distance])
     
-    for circle in circles:
-        circ = Circle((circle['x'],circle['y']),object_radius_measure,linewidth=1,edgecolor='blue',facecolor='none')
-        ax = plt.gca()
-        ax.add_patch(circ)
-    # add the background to the plot in yellow
-    rect = Rectangle((background['x'],background['y']),background['width'],background['height'],linewidth=1,edgecolor='yellow',facecolor='none')
-    ax = plt.gca()
-    ax.add_patch(rect)
+    contrasts = []
+    for center in LC_centers:
+        mean_value,annulus_value,contrast = calculate_contrast(image,center,resolution,annulus_outer_radius,annulus_inner_radius)
+        contrasts.append(contrast)
+
+    # Build the image
+    fig, ax = plt.subplots(figsize=(8, 8))
+    ax.imshow(image, cmap='gray')
+    ax.set_title('LC objects with ROIs')
+
+    for center in LC_centers:
+        circle = plt.Circle((center[0], center[1]), 3/resolution[0], edgecolor='red', facecolor='none')    #object has radius of 5mm
+        ax.add_patch(circle)
+        annulus_outer = plt.Circle((center[0], center[1]),
+                         annulus_outer_radius/resolution[0], edgecolor='blue', facecolor='none', linestyle='dashed')
+        ax.add_patch(annulus_outer)
+        annulus_inner = plt.Circle((center[0], center[1]),
+                         annulus_inner_radius/resolution[0], edgecolor='blue', facecolor='none', linestyle='dashed')
+        ax.add_patch(annulus_inner)
+    plt.show()
     results['image with ROIs'] = fig  
 
-    # calculate contrasts
-    true_contrasts = [5.6, 4.0, 2.8, 2.0, 1.2, 0.8]
-    contrasts = []
-    for circle in circles:
-        ROImean,ROIstd,ROIsize = measure_ROI(image_crop,circle['x'],circle['y'],object_radius_measure)
-        contrasts.append((((mean_background-ROImean)/mean_background)*100))
-
     # contrastplot
+    true_contrasts = [5.6, 4.0, 2.8, 2.0, 1.2, 0.8]
     fig = plt.figure()
     plt.plot(contrasts,'b')
     plt.plot(true_contrasts,'r')
@@ -126,4 +245,4 @@ def process_LowContrast(image_raw,resolution):
     plt.grid(True)
     results['LowContrast_plot'] = fig
     
-    return results
+    return results    

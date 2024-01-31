@@ -18,7 +18,7 @@
     "comments": {
         "author": "Jaap Groen, OLVG",  
         "description": "Generic AI-based analysis of Normi13 phantom", 
-        "version": "20200511"
+        "version": "20240131"
     }, 
     "info": {
         "acqdatetime": {

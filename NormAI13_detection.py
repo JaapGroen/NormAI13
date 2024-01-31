@@ -24,7 +24,7 @@ def normi13_detection(dcm_file):
     results = {}
     detection=[]
     
-    ds = dcm_file
+    ds = dcm_file       
     
     # try:
         # ds = pydicom.dcmread(dcm_file)
@@ -42,7 +42,11 @@ def normi13_detection(dcm_file):
         resolution = [FOV/ds.Columns,FOV/ds.Rows]
     results['resolution'] = resolution
     
-    image_detection = ds.pixel_array.astype('float32')
+    if len(ds.pixel_array.shape)==3:
+        print('Multiframe image, getting the middle frame as image.')
+        image_detection = ds.pixel_array[round(ds.pixel_array.shape[0]/2),:,:].astype('float32')
+    else:
+        image_detection = ds.pixel_array.astype('float32')
     results['image'] = image_detection
     image_detection = image_detection / np.amax(image_detection)
 
