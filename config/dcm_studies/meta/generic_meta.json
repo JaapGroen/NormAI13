@@ -1,33 +1,238 @@
 {
-    "actions": {
-        "acqdatetime": {
-            "filters": {},
-            "params": {}
-        },
-        "header_series": {
-            "filters": {},
-            "params": {}
-        },
-        "qc_series": {
-            "filters": {},
-            "params": {}
-        }
+  "results": {
+    "AcquisitionDateTime": {
+      "description": "date and time of acquisition",
+      "decimals": null,
+      "units": "",
+      "constraint_period": 180,
+      "display_level": 1,
+      "constraint_is_active": true,
+      "display_name": "DateTime"
     },
-    "cfgformat": "20180910",
-    "comments": {
-        "author": "Jaap Groen, OLVG",
-        "description": "meta for NormAI13 module",
-        "version": "20240131"
+    "StationName": {
+      "description": "Name of the modality",
+      "display_level": 2,
+      "display_name": "StationName"
     },
-    "info": {
-        "acqdatetime": {
-            "params": {}
-        },
-        "header_series": {
-            "params": {}
-        },
-        "qc_series": {
-            "params": {}
-        }
+	"StudyDesc": {
+      "description": "Study description",
+      "display_level": 2,
+      "display_name": "Study description"
+    },
+	"TubeVoltage": {
+      "description": "Tubevoltage",
+      "display_level": 1,
+      "display_name": "Tubevoltage",
+	  "units": "kV"
+    },
+	"DAP": {
+      "description": "Dose-Area Product",
+      "display_level": 1,
+      "display_name": "DAP",
+	  "units": "dGy.cm2"
+    },
+	"TubeCurrent in uA": {
+      "description": "TubeCurrent",
+      "display_level": 2,
+      "display_name": "TubeCurrent",
+	  "units": "uA"
+    },
+	"Exposure Time": {
+      "description": "Exposure Time",
+      "display_level": 2,
+      "display_name": "Exposure Time",
+	  "units": "ms"
+    },
+	"Exposure": {
+      "description": "Exposure",
+      "display_level": 2,
+      "display_name": "Exposure",
+	  "units": "mAs"
+    },
+	"Exposure in uAs": {
+      "description": "Exposure in uAs",
+      "display_level": 2,
+      "display_name": "Exposure in uAs",
+	  "units": "uAs"
+    },
+	"Relative XRay Exposure": {
+      "description": "Relative XRay Exposure",
+      "display_level": 2,
+      "display_name": "Relative XRay Exposure"
+    },
+	"Distance Source to Detector": {
+      "description": "Distance Source to Detector",
+      "display_level": 2,
+      "display_name": "Distance Source to Detector",
+	  "units": "mm"
+    },
+	"Distance Source to Patient": {
+      "description": "Distance Source to Patient",
+      "display_level": 2,
+      "display_name": "Distance Source to Patient",
+	  "units": "mm"
+    },
+	"Requested Procedure Description": {
+      "description": "Requested Procedure Description",
+      "display_level": 2,
+      "display_name": "Requested Procedure Description"
+    },
+	"Protocol Name": {
+      "description": "Protocol Name",
+      "display_level": 2,
+      "display_name": ""
+    },
+	"correction_angle_LP": {
+      "description": "Angle used to correct the LP object",
+      "display_level": 5,
+      "display_name": "Angle used to correct the LP object"
+    },
+	"correction_angle_HC": {
+      "description": "Angle used to correct the HC object",
+      "display_level": 5,
+      "display_name": "Angle used to correct the HC object"
+    },
+	"image_LP_processing": {
+      "description": "Processing steps of the LP object",
+      "display_level": 5,
+      "display_name": "Processing steps of the LP object"
+    },
+	"plot_LP_bars": {
+      "description": "LP detection plot",
+      "display_level": 4,
+      "display_name": "LP detection plot"
+    },
+	"image_HC_processing": {
+      "description": "Processing steps of the HC object",
+      "display_level": 5,
+      "display_name": "Processing steps of the HC object"
+    },
+	"image_first_LC_detection": {
+      "description": "Processing steps of the first LC object",
+      "display_level": 5,
+      "display_name": "Processing steps of the first LC object"
+    },
+	"image_second_LC_detection": {
+      "description": "Processing steps of the secondLC object",
+      "display_level": 5,
+      "display_name": "Processing steps of the second LC object"
+    },
+    "image_with_objects": {
+      "description": "Detected objects in the phantom",
+      "display_level": 1,
+      "display_name": "Detected objects"
+    },
+    "Pixelsize": {
+      "description": "Size of image pixels",
+      "display_level": 2,
+      "display_name": "Pixel Size"
+    },
+    "SNR": {
+      "description": "Signal to noise ratio of the uniformity object",
+      "display_level": 1,
+      "display_name": "SNR",
+      "constraint_minlowhighmax": [
+        0,
+        1,
+        95,
+        100
+      ],
+      "units": ""
+    },
+    "diff_to_global_mean": {
+      "description": "Deviation from mean in the uniformity object",
+      "display_level": 1,
+      "display_name": "Maximum deviation from mean",
+      "constraint_minlowhighmax": [
+        0,
+        0,
+        0.08,
+        0.1
+      ],
+      "units": ""
+    },
+    "sd_perc_ROI": {
+      "description": "Noiselevel in uniformity ROIs",
+      "display_level": 1,
+      "display_name": "Maximum noiselevel in uniformity ROIs",
+      "constraint_minlowhighmax": [
+        0,
+        0,
+        4,
+        5
+      ],
+      "units": ""
+    },
+    "visible_resolution": {
+      "description": "Visible resolution in lp/mm",
+      "display_level": 1,
+      "display_name": "Linepairs resolution",
+      "constraint_minlowhighmax": [
+        0.5,
+        1,
+        5,
+        5
+      ],
+      "units": "lp/mm"
+    },
+    "visible_elements_HC": {
+      "description": "Number of highcontrast elements that are visible",
+      "display_level": 1,
+      "display_name": "Number of highcontrast elements",
+      "constraint_minlowhighmax": [
+        5,
+        6,
+        7,
+        7
+      ],
+      "units": ""
+    },
+    "image_transformations": {
+      "description": "Applied image transformations",
+      "display_level": 5,
+      "display_name": "Applied image transformations"
+    },
+    "image_LP_bars": {
+      "description": "",
+      "display_level": 3,
+      "display_name": "LP Bars cut out"
+    },
+    "plot_HC": {
+      "description": "Plot of highcontrast elements",
+      "display_level": 1,
+      "display_name": "Plot of highcontrast elements"
+    },
+    "profile_HC": {
+      "description": "Profile of the HC object with peak detection",
+      "display_level": 4,
+      "display_name": "Profile of the HC object with peak detection"
+    },
+    "image_noise_ROIs": {
+      "description": "Uniformity object with ROIs",
+      "display_level": 3,
+      "display_name": "Uniformity object with ROIs"
+    },
+    "image_LC_ROIs": {
+      "description": "LC object with ROIs",
+      "display_level": 3,
+      "display_name": "LC object with ROIs"
+    },
+    "plot_LC": {
+      "description": "Plot of lowcontrast elements",
+      "display_level": 1,
+      "display_name": "Plot of lowcontrast elements"
+    },
+    "plot_CNR": {
+      "description": "Plot of the Contrast to Noise Ratio",
+      "display_level": 5,
+      "display_name": "Plot of the Contrast to Noise Ratio"
     }
+  },
+  "metaformat": "20180910",
+  "comments": {
+    "creator": "custom",
+    "author": "Jaap Groen, OLVG",
+    "description": "Generic meta for NormAI13",
+	"version": "20240207"
+  }
 }

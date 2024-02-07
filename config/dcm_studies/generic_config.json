@@ -4,12 +4,26 @@
             "filters": {}, 
             "params": {}
         }, 
-        "header_series": {
+        "LogHeaderTags": {
             "filters": {}, 
             "params": {},
-            "tags":[]
+            "tags":{
+                "StationName":"0008,1010",
+                "StudyDesc":"0008,1030",
+                "TubeVoltage":"0018,0060",
+                "DAP":"0018,115E",
+                "TubeCurrent in uA":"0018,8151",
+                "Exposure Time":"0018,1150",
+                "Exposure":"0018,1152",
+                "Exposure in uAs":"0018,1153",
+                "Relative XRay Exposure":"018,1405",
+                "Distance Source to Detector":"0018,1110",
+                "Distance Source to Patient":"0018,1111",
+                "Requested Procedure Description":"0032,1060",
+                "Protocol Name":"0018,1030"
+            }
         }, 
-        "qc_series": {
+        "Normi13_analysis": {
             "filters": {}, 
             "params": {}
         }
@@ -18,16 +32,16 @@
     "comments": {
         "author": "Jaap Groen, OLVG",  
         "description": "Generic AI-based analysis of Normi13 phantom", 
-        "version": "20240131"
+        "version": "20240207"
     }, 
     "info": {
         "acqdatetime": {
             "params": {}
         }, 
-        "header_series": {
+        "LogHeaderTags": {
             "params": {}
         }, 
-        "qc_series": {
+        "Normi13_analysis": {
             "params": {}
         }
     }
