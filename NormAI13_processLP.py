@@ -38,7 +38,7 @@ def process_LP(image_raw,resolution, results):
             x_max = np.max([x1,x2])
         if np.max([y1,y2])>y_max:
             y_max = np.max([y1,y2])
-        angle = math.degrees(math.atan2(y2 - y1, x2 - x1))
+        angle = math.degrees(math.atan2(y_max - y_min, x_max - x_min))
         if 40 <= angle <= 50:
             angles.append(angle)
         elif -40 >= angle >= -50:
