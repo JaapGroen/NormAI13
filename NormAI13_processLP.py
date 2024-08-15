@@ -18,27 +18,10 @@ def process_LP(image_raw,resolution, results):
     image_edges = cv2.Canny(image_8bit, 100, 100)
 
     print('  2. angle detection')
-    lines = cv2.HoughLinesP(image_edges, 1, math.pi / 180.0, 100, minLineLength=80, maxLineGap=5)
-    if lines is None:
-        kernel = np.ones((5, 5), np.uint8)
-        image_dilate = cv2.dilate(image_edges, kernel, iterations=2)
-        image_erode = cv2.erode(image_dilate, kernel, iterations=1)
-        lines = cv2.HoughLinesP(image_erode, 1, math.pi / 180.0, 100, minLineLength=80, maxLineGap=5)
-    angles = []
-    x_min, y_min = image_raw.shape
-    x_max = 0
-    y_max = 0
-    for line in lines:
-        [x1, y1, x2, y2] = line[0]
-        if np.min([x1,x2])<x_min:
-            x_min = np.min([x1,x2])
-        if np.min([y1,y2])<y_min:
-            y_min = np.min([y1,y2])
-        if np.max([x1,x2])>x_max:
-            x_max = np.max([x1,x2])
-        if np.max([y1,y2])>y_max:
-            y_max = np.max([y1,y2])
-        angle = math.degrees(math.atan2(y2 - y1, x2 - x1))
+    lines = cv2.HoughLines(image_edges, 1, math.pi / 720.0, 100)
+    angles=[]
+    for rho, theta in lines[:, 0]:
+        angle = np.degrees(theta)
         if 40 <= angle <= 50:
             angles.append(angle)
         elif -40 >= angle >= -50:

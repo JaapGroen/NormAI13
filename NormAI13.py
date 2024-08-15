@@ -80,7 +80,10 @@ def LogHeaderTags(data, results, action):
             value = 'Tag missing from header'
             
         # write results
-        results.addString(varname, str(value)[:min(len(str(value)),100)])
+        try:
+           results.addFloat(varname, float(value))
+        except:
+           results.addString(varname, str(value)[:min(len(str(value)),100)])
 
 
 
