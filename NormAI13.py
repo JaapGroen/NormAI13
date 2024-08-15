@@ -82,7 +82,7 @@ def LogHeaderTags(data, results, action):
         # write results
         try:
            results.addFloat(varname, float(value))
-        except ValueError:
+        except:
            results.addString(varname, str(value)[:min(len(str(value)),100)])
 
 
